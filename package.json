@@ -1,0 +1,32 @@
+{
+  "name": "bleap_recovery_funds",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bin": {
+    "bleap-recover": "./dist/cli.js"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "viem": "^2.55.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "dotenv": "^17.4.2",
+    "prool": "^0.2.11",
+    "tsx": "^4.23.1",
+    "typescript": "^5.9.3",
+    "vitest": "^2.1.9"
+  }
+}
