@@ -27,6 +27,22 @@ to any real wallet.
 If you don't know your `id` / signer, run `status` (below) — it reads the registered signer
 straight from the chain so you can confirm it matches the key you hold.
 
+### Finding your root permissionId
+
+The root permissionId is a **4-byte** value unique to your wallet (e.g. `0xd7399586`). Two ways to
+discover it:
+
+1. **Read `rootValidator()` on your wallet** (simplest). On any chain where the wallet is already
+   deployed, open the wallet address in an explorer ("Read Contract", or `cast call <wallet>
+   'rootValidator()'`). It returns 21 bytes: `0x02` (PERMISSION type) followed by your 4-byte
+   permissionId — e.g. `0x02d7399586…` → id `0xd7399586`.
+2. **From the wallet's deployment transaction**: the `deployWithFactory` calldata embeds the root
+   validator; bytes 2–5 are the permissionId.
+
+Then confirm it with `status`: the reported `signer owner` must be the address your recovery key
+derives to. Every `--id` option accepts **both** the 4-byte form (`0xd7399586`) and the right-padded
+bytes32 form (`0xd7399586000…000`) — they are equivalent.
+
 Install:
 
 ```bash

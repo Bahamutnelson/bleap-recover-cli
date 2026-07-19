@@ -77,6 +77,11 @@ bleap-recover status \
   --owner  0xYourSignerAddress
 ```
 
+`--id` is your wallet's ROOT permissionId — a 4-byte value you can read from your wallet's
+`rootValidator()` (returns `0x02` + the 4-byte id; e.g. `0x02d7399586…` → `--id 0xd7399586`).
+Both the 4-byte and the right-padded bytes32 forms are accepted. See
+[docs/GUIDE.md](docs/GUIDE.md) for details.
+
 Example output:
 
 ```
