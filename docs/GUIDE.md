@@ -99,9 +99,49 @@ Bleap recovery status
   prefund** transaction (see stage 3). A non-zero `token balance` tells you the stuck funds are that
   ERC-20 — note the decimals (`dp`) so you get the amount right.
 
-> **Amounts are always in the asset's smallest unit.** For an 18-decimal token, `2000` tokens =
-> `2000000000000000000000`. For a 6-decimal token, `2000` tokens = `2000000000`. Native amounts are
-> in wei.
+### Amounts and token decimals
+
+`--amount` (and native amounts) are always in the asset's **smallest unit** — never the "human"
+amount you see in a wallet UI. Convert with:
+
+```
+amount = human_amount × 10^decimals
+```
+
+So you must know the asset's `decimals`. `status --token <addr>` prints it as `dp`; you can also
+read the token's `decimals()` on a block explorer.
+
+**The same token can have different decimals on different chains** — this is the most common and
+most expensive mistake. USDC is the classic trap:
+
+| Asset | Chain | decimals | `--amount` for 2000 tokens |
+|---|---|---|---|
+| USDC | Ethereum | 6 | `2000000000` |
+| USDC | Polygon | 6 | `2000000000` |
+| USDC (Binance-Peg) | BSC | **18** | `2000000000000000000000` |
+| USDT | Ethereum | 6 | `2000000000` |
+| USDT (Binance-Peg) | BSC | **18** | `2000000000000000000000` |
+| DAI | most chains | 18 | `2000000000000000000000` |
+| WBTC | Ethereum | 8 | `200000000000` |
+| native (ETH / BNB / POL) | — | 18 (wei) | `2000000000000000000000` |
+
+Worked examples for an **18-decimal** token (e.g. Binance-Peg USDC on BSC):
+
+- all 2000 tokens → `2000000000000000000000`
+- 1 token → `1000000000000000000`
+- 0.5 token → `500000000000000000`
+
+And for a **6-decimal** token (e.g. USDC on Ethereum or Polygon):
+
+- 2000 tokens → `2000000000`
+- 1 token → `1000000`
+
+To withdraw the **entire** balance, copy the exact integer `status` reports as `token balance` (or
+`native balance`) — it is already in smallest units, so no conversion is needed.
+
+> WARNING: getting decimals wrong is silent and severe — sending an 18-decimals token as if it were
+> 6-decimals moves 10¹² times too little (or, the other way, reverts for insufficient balance).
+> Always confirm the `dp` shown by `status` before you sign.
 
 ---
 
@@ -186,6 +226,28 @@ This prints up to three things:
 
 Send this **first**, from any account with the native gas token. It tops up the wallet's EntryPoint
 deposit so the UserOp can pay for its own execution.
+
+**What that `value` means.** Native amounts are always in **wei**, the smallest unit of the gas
+token (18 decimals, exactly like an 18-decimal ERC-20). To read it as BNB/ETH, move the decimal
+point 18 places left:
+
+```
+65000000000000 wei  =  0.000065 BNB   (65000000000000 ÷ 10^18)
+```
+
+So it's a tiny amount — here about 0.000065 BNB. **You don't compute it** — the tool derives it for
+you as the UserOp's worst-case gas cost:
+
+```
+value = (verificationGasLimit + callGasLimit + preVerificationGas) × maxFeePerGas
+      ≈ (600000 + 500000 + 200000) gas × 0.05 gwei
+      = 1,300,000 × 50,000,000 wei
+      = 65,000,000,000,000 wei
+```
+
+Just send the **exact** `value` printed (a hair more is fine — any unused deposit stays in the
+wallet's EntryPoint balance and can be withdrawn later). If the wallet already holds native token,
+this prefund step is skipped entirely.
 
 **(b) A hash to sign.**
 

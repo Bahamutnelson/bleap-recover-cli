@@ -142,7 +142,9 @@ bleap-recover build withdraw-sign \
 ```
 
 - If a `depositTx` is printed first, send it before signing — it tops up the wallet's EntryPoint
-  gas deposit (needed when the wallet holds no native token).
+  gas deposit (needed when the wallet holds no native token). Its `value` is in **wei** (18
+  decimals): e.g. `65000000000000 wei = 0.000065 BNB`. The tool computes it for you as the UserOp's
+  worst-case gas cost (`totalGasLimit × maxFeePerGas`) — just send the exact value shown.
 - **`personal_sign` the printed 32-byte hash** in your wallet. Sign the exact hash — do **not**
   route it through a UI that re-hashes or prefixes the string again.
 
@@ -159,6 +161,50 @@ bleap-recover build withdraw-submit \
 
 Any funded account can broadcast the printed `handleOps` transaction; the swept funds go to your
 chosen destination. Recover **one asset at a time** — repeat steps 4–5 per token.
+
+## Amounts and token decimals
+
+`--amount` (and native amounts) are always in the asset's **smallest unit** — never the "human"
+amount you see in a wallet UI. Convert with:
+
+```
+amount = human_amount × 10^decimals
+```
+
+So you must know the asset's `decimals`. `status --token <addr>` prints it as `dp`; you can also
+read the token's `decimals()` on a block explorer.
+
+**The same token can have different decimals on different chains** — this is the most common and
+most expensive mistake. USDC is the classic trap:
+
+| Asset | Chain | decimals | `--amount` for 2000 tokens |
+|---|---|---|---|
+| USDC | Ethereum | 6 | `2000000000` |
+| USDC | Polygon | 6 | `2000000000` |
+| USDC (Binance-Peg) | BSC | **18** | `2000000000000000000000` |
+| USDT | Ethereum | 6 | `2000000000` |
+| USDT (Binance-Peg) | BSC | **18** | `2000000000000000000000` |
+| DAI | most chains | 18 | `2000000000000000000000` |
+| WBTC | Ethereum | 8 | `200000000000` |
+| native (ETH / BNB / POL) | — | 18 (wei) | `2000000000000000000000` |
+
+Worked examples for an **18-decimal** token (e.g. Binance-Peg USDC on BSC):
+
+- all 2000 tokens → `2000000000000000000000`
+- 1 token → `1000000000000000000`
+- 0.5 token → `500000000000000000`
+
+And for a **6-decimal** token (e.g. USDC on Ethereum or Polygon):
+
+- 2000 tokens → `2000000000`
+- 1 token → `1000000`
+
+To withdraw the **entire** balance, copy the exact integer `status` reports as `token balance` (or
+`native balance`) — it is already in smallest units, so no conversion is needed.
+
+> WARNING: getting decimals wrong is silent and severe — sending an 18-decimals token as if it were
+> 6-decimals moves 10¹² times too little (or, the other way, reverts for insufficient balance).
+> Always confirm the `dp` shown by `status` before you sign.
 
 ## Options reference
 
