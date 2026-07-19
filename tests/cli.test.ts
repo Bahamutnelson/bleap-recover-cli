@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildProgram, coerceChainArg, serializeUserOp, parseUserOp } from "../src/cli.js";
+import { buildProgram, coerceChainArg, coercePermissionId, serializeUserOp, parseUserOp } from "../src/cli.js";
 import { resolveChain } from "../src/chains.js";
 import type { PackedUserOp } from "../src/userop.js";
 
@@ -40,5 +40,22 @@ describe("cli", () => {
     expect(back.nonce).toBe(userOp.nonce);
     expect(back.preVerificationGas).toBe(userOp.preVerificationGas);
     expect(back).toEqual(userOp);
+  });
+
+  it("coerces a 4-byte --id to the right-padded bytes32 module key", () => {
+    expect(coercePermissionId("0xd7399586")).toBe(
+      "0xd739958600000000000000000000000000000000000000000000000000000000",
+    );
+  });
+
+  it("passes a full bytes32 --id through unchanged", () => {
+    const full = "0xd739958600000000000000000000000000000000000000000000000000000000";
+    expect(coercePermissionId(full)).toBe(full);
+  });
+
+  it("rejects an --id that is neither 4 nor 32 bytes with a clear message", () => {
+    expect(() => coercePermissionId("0xd73995")).toThrow(/4 bytes.*or.*32 bytes|permission id/i);
+    expect(() => coercePermissionId("d7399586")).toThrow(/permission id/i);
+    expect(() => coercePermissionId("0xzz399586")).toThrow(/permission id/i);
   });
 });

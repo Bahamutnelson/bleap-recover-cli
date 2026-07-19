@@ -28,6 +28,20 @@ function resolveChainArg(raw: string, rpc?: string): ChainInfo {
 }
 
 /**
+ * The docs (and the wallet's rootValidator()) express the permission id as 4 bytes, but the
+ * module's signers mapping is keyed by that value right-padded to bytes32. Accept both forms
+ * on the CLI so users can paste the id exactly as they discovered it.
+ */
+export function coercePermissionId(raw: string): Hex {
+  if (/^0x[0-9a-fA-F]{8}$/.test(raw)) return `${raw}${"0".repeat(56)}` as Hex;
+  if (/^0x[0-9a-fA-F]{64}$/.test(raw)) return raw as Hex;
+  throw new Error(
+    `invalid permission id "${raw}": expected 4 bytes (0x + 8 hex chars, e.g. 0xd7399586) ` +
+      `or the right-padded 32 bytes form`,
+  );
+}
+
+/**
  * PackedUserOp carries bigint fields (`nonce`, `preVerificationGas`) that JSON.stringify cannot
  * serialize directly. Encode them as decimal strings on the way out and revive them as bigint
  * on the way back in, so withdraw-sign's printed userOp can be round-tripped through a file and
@@ -75,7 +89,7 @@ export function buildProgram(): Command {
     .requiredOption("--wallet <address>", "the Bleap wallet address")
     .requiredOption("--chain <idOrName>", "target chain (id or name, e.g. 56 or bsc)")
     .option("--rpc <url>", "override RPC URL for the target chain")
-    .option("--id <hex>", "the ROOT permission id (bytes32) to resolve the signer for")
+    .option("--id <hex>", "the ROOT permission id (4 bytes e.g. 0xd7399586, or right-padded bytes32) to resolve the signer for")
     .option("--owner <address>", "expected signer/owner address (cross-checked against --id)")
     .option("--token <address>", "ERC-20 token address to also report a balance for")
     .action(async (opts) => {
@@ -84,7 +98,7 @@ export function buildProgram(): Command {
       const report = await getStatus({
         client,
         wallet: opts.wallet as Address,
-        id: opts.id as Hex | undefined,
+        id: opts.id ? coercePermissionId(opts.id) : undefined,
         owner: opts.owner as Address | undefined,
         token: opts.token as Address | undefined,
       });
@@ -148,10 +162,10 @@ export function buildProgram(): Command {
     .description("Step 3a: trigger the Slow Withdrawal timelock (must be sent by the owner key)")
     .requiredOption("--wallet <address>", "the Bleap wallet address")
     .requiredOption("--chain <idOrName>", "target chain (id or name)")
-    .requiredOption("--id <hex>", "the ROOT permission id (bytes32)")
+    .requiredOption("--id <hex>", "the ROOT permission id (4 bytes e.g. 0xd7399586, or right-padded bytes32)")
     .action(async (opts) => {
       const chain = resolveChainArg(opts.chain);
-      const tx = buildWithdrawStart({ chainId: chain.id, wallet: opts.wallet as Address, id: opts.id as Hex });
+      const tx = buildWithdrawStart({ chainId: chain.id, wallet: opts.wallet as Address, id: coercePermissionId(opts.id) });
       console.log(formatTxRequest(tx, chain.explorer));
     });
 
