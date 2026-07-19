@@ -1,5 +1,7 @@
 # bleap-recover
 
+> 📖 **New to this?** Read the [step-by-step recovery guide](docs/GUIDE.md).
+
 A **builder-only** command-line tool for recovering funds stuck in a
 [Bleap](https://bleap.finance) Magic Wallet (a [ZeroDev](https://zerodev.app) **Kernel v3.1** /
 ERC-4337 smart account) on an EVM chain — typically when the wallet exists on several chains but
